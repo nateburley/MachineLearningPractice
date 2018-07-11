@@ -16,8 +16,6 @@ from keras.layers import Input
 from scipy.optimize import fmin_l_bfgs_b
 import time
 
-start_time = time.time()
-
 target_height = 512
 target_width = 512
 target_size = (target_height, target_width)
@@ -156,16 +154,62 @@ P = getFeatureReps(x=content_image_array, layer_names=[content_layer_name], mode
 As = getFeatureReps(x=style_image_array, layer_names=style_layer_names, model=sModel)
 ws = np.ones(len(style_layer_names)) / float(len(style_layer_names))
 
-iterations = 600
-x_val = gen_image.flatten()
-xopt, f_val, info= fmin_l_bfgs_b(calculateLoss, x_val, fprime=getGradient, maxiter=iterations, disp=True, iprint=75)
+iterations = 10
+#xopt, f_val, info= fmin_l_bfgs_b(calculateLoss, x_val, fprime=getGradient, maxiter=iterations, disp=True, iprint=75)
+# TRAINING/IMAGE OUTPUT #############################################################################################
+print("\n\n\n\n\nMade it here bitch\n\n\n\n\n")
+for i in range(0, iterations):
+    # Trains the classifier
+    start_time = time.time()
+    print("Starting iteration {} of {}...".format(i, iterations))
+    gen_image, f_val, info= fmin_l_bfgs_b(calculateLoss, gen_image.flatten(), fprime=getGradient, disp=True, iprint=0)
 
+    # Saves the image after every iteration
+    output_name = "output_at_iteration_%d.png" % (i + 1)
+    xOut = postprocessArray(gen_image.copy())
+    xIm = saveOriginalSize(xOut)
+    print('Image saved')
+    end = time.time()
+    print('ITERATION {} COMPLETED. --- {} seconds ---\n'.format(i, end-start_time))
 
-# IMAGE OUTPUT #############################################################################################
+"""
+for i in range(num_iter):
+    print("Starting iteration %d of %d" % ((i + 1), num_iter))
+    start_time = time.time()
 
-# Turns the array back into a 
-xOut = postprocessArray(xopt)
-xIm = saveOriginalSize(xOut)
-print('Image saved')
-end = time.time()
-print('Time taken: {}'.format(end-start_time))
+    x, min_val, info = fmin_l_bfgs_b(evaluator.loss, x.flatten(), fprime=evaluator.grads, maxfun=20)
+
+    if prev_min_val == -1:
+        prev_min_val = min_val
+
+    improvement = (prev_min_val - min_val) / prev_min_val * 100
+
+    print("Current loss value:", min_val, " Improvement : %0.3f" % improvement, "%")
+    prev_min_val = min_val
+    # save current generated image
+    img = deprocess_image(x.copy())
+
+    if preserve_color and content is not None:
+        img = original_color_transform(content, img, mask=color_mask)
+
+    if not rescale_image:
+        img_ht = int(img_width * aspect_ratio)
+        print("Rescaling Image to (%d, %d)" % (img_width, img_ht))
+        img = imresize(img, (img_width, img_ht), interp=args.rescale_method)
+
+    if rescale_image:
+        print("Rescaling Image to (%d, %d)" % (img_WIDTH, img_HEIGHT))
+        img = imresize(img, (img_WIDTH, img_HEIGHT), interp=args.rescale_method)
+
+    fname = result_prefix + "_at_iteration_%d.png" % (i + 1)
+    imsave(fname, img)
+    end_time = time.time()
+    print("Image saved as", fname)
+    print("Iteration %d completed in %ds" % (i + 1, end_time - start_time))
+
+    if improvement_threshold is not 0.0:
+        if improvement < improvement_threshold and improvement is not 0.0:
+            print("Improvement (%f) is less than improvement threshold (%f). Early stopping script." %
+                  (improvement, improvement_threshold))
+            exit()
+"""
