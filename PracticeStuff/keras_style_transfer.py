@@ -124,10 +124,10 @@ def reprocessArray(x):
     x = preprocess_input(x)
     return x
 
-def saveOriginalSize(x, target_size=content_image_orig_size):
+def saveOriginalSize(x, target_size=content_image_orig_size, output_path=gen_image_output_path):
     xIm = Image.fromarray(x)
     xIm = xIm.resize(target_size)
-    xIm.save(gen_image_output_path)
+    xIm.save(output_path)
     return xIm
 
 # Function that calculates the gradient of the image with respect to generated image
@@ -157,20 +157,22 @@ ws = np.ones(len(style_layer_names)) / float(len(style_layer_names))
 iterations = 10
 #xopt, f_val, info= fmin_l_bfgs_b(calculateLoss, x_val, fprime=getGradient, maxiter=iterations, disp=True, iprint=75)
 # TRAINING/IMAGE OUTPUT #############################################################################################
-print("\n\n\n\n\nMade it here bitch\n\n\n\n\n")
+x = gen_image
+f_val = 0
+info = 0
 for i in range(0, iterations):
     # Trains the classifier
     start_time = time.time()
-    print("Starting iteration {} of {}...".format(i, iterations))
-    gen_image, f_val, info= fmin_l_bfgs_b(calculateLoss, gen_image.flatten(), fprime=getGradient, disp=True, iprint=0)
+    print("\nStarting iteration {} of {}...".format(i, iterations))
+    x, f_val, info= fmin_l_bfgs_b(calculateLoss, x.flatten(), fprime=getGradient, maxfun=20)
 
     # Saves the image after every iteration
-    output_name = "output_at_iteration_%d.png" % (i + 1)
+    output_name = "output/output_at_iteration_%d.png" % (i + 1)
     xOut = postprocessArray(gen_image.copy())
-    xIm = saveOriginalSize(xOut)
-    print('Image saved')
+    xIm = saveOriginalSize(xOut, output_name)
+    print('Image saved to {}'.format(output_name))
     end = time.time()
-    print('ITERATION {} COMPLETED. --- {} seconds ---\n'.format(i, end-start_time))
+    print('ITERATION {} COMPLETED. --- {} seconds ---'.format(i, end-start_time))
 
 """
 for i in range(num_iter):
