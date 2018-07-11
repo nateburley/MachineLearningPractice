@@ -158,7 +158,7 @@ ws = np.ones(len(style_layer_names)) / float(len(style_layer_names))
 
 iterations = 600
 x_val = gen_image.flatten()
-xopt, f_val, info= fmin_l_bfgs_b(calculateLoss, x_val, fprime=getGradient, maxiter=iterations, disp=True, iprint=50)
+xopt, f_val, info= fmin_l_bfgs_b(calculateLoss, x_val, fprime=getGradient, maxiter=iterations, disp=True, iprint=75)
 
 
 # IMAGE OUTPUT #############################################################################################
