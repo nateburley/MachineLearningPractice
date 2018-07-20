@@ -2,8 +2,11 @@
 Program that learns to navigate the OpenAI gym's 'Frozen Lake' environment,
 using a Q-learning table.
 """
+
+# IMPORTS, SETUP, HYPERPARAMETERS DEFINED ######################################################################
 import numpy as np
 import gym, random
+import time, os
 
 # Set up our environment, get the action and state sizes
 env = gym.make('FrozenLake-v0')
@@ -15,7 +18,7 @@ qtable = np.zeros((state_size, action_size))
 print(qtable)
 
 # Hyper parameters defined here
-total_episodes = 1000
+total_episodes = 5000
 learning_rate = 0.8
 max_steps = 99
 gamma = 0.95            # Discount rate- weighs future reward
@@ -25,7 +28,8 @@ max_epsilon = 1.0       # Highest exploration rate (used at start)
 min_epsilon = 0.01      # Lowest exploration rate (once it learns, it'll go for the gold)
 decay_rate = 0.01       # Exponential decay rate for exploration probability
 
-# MAIN ALGORITHM IMPLENTED BELOW ###############################################################
+
+# MAIN Q-LEARNING ALGORITHM IMPLENTED BELOW #######################################################################
 
 # List of rewards
 rewards = []
@@ -36,7 +40,7 @@ for episode in range(total_episodes):
     state = env.reset()
     step = 0
     done = False
-    total_rewards = 0
+    total_rewards = 0.0
 
     # Start walking through the environment
     for step in range(max_steps):
@@ -63,6 +67,50 @@ for episode in range(total_episodes):
     # Reduce epsilon, to explore less
     epsilon = min_epsilon + (max_epsilon - min_epsilon)*np.exp(-decay_rate*episode)
     rewards.append(total_rewards)
+
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print ("Score after episode: " + str(episode) + ": " +  str(total_rewards))
+    print(qtable)
+    print("\n")
+
+
+# ACTUALLY PLAYS FROZEN LAKE, POST TRAINING! #####################################################################
+print("TOTAL REWARDS FROM TRAINING: " +  str(sum(rewards)))
+env.reset()
+
+for  episode in range(10):
+    state = env.reset()
+    step = 0
+    done = False
+    total_reward = 0
+    print("**************************************************************************************")
+    print("EPISODE ", episode)
+    print("**************************************************************************************")
+    time.sleep(2)
+
+    for step in range(max_steps):
+        env.render()
+   
+        action = np.argmax(qtable[state,:]) # Should get the best action given the state
+        
+        new_state, reward, done, info = env.step(action)
+        
+        total_reward += reward
+
+        if done: break
+        state = new_state
+
+        time.sleep(0.1)
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+    print("**********************************")
+    print("REWARD THIS ROUND: ", total_reward)
+    print("**********************************\n\n")
+    time.sleep(1)
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+
+env.close()
 
 
 """
