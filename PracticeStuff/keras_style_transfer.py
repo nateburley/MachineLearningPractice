@@ -15,13 +15,17 @@ from keras.applications.vgg16 import preprocess_input
 from keras.layers import Input
 from scipy.optimize import fmin_l_bfgs_b
 import time
+import tensorflow as tf
+
+# Disable TF warnings
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 target_height = 512
 target_width = 512
 target_size = (target_height, target_width)
 content_image_path = "sources/cathedral1.jpg"
 style_image_path = "styles/giger_crop.jpg"
-gen_image_output_path = './results/output.jpg'
+gen_image_output_path = 'output/output.jpg'
 
 # Turns content image into an array (with the magic of Keras)
 content_image = load_img(path=content_image_path, target_size=target_size)
@@ -124,9 +128,9 @@ def reprocessArray(x):
     x = preprocess_input(x)
     return x
 
-def saveOriginalSize(x, target_size=content_image_orig_size, output_path=gen_image_output_path):
+def saveOriginalSize(x, targ_size=target_size, output_path=gen_image_output_path):
     xIm = Image.fromarray(x)
-    xIm = xIm.resize(target_size)
+    xIm = xIm.resize((512,512))
     xIm.save(output_path)
     return xIm
 
@@ -160,14 +164,14 @@ iterations = 10
 x = gen_image
 f_val = 0
 info = 0
-for i in range(0, iterations):
+for i in range(1, iterations):
     # Trains the classifier
     start_time = time.time()
     print("\nStarting iteration {} of {}...".format(i, iterations))
     x, f_val, info= fmin_l_bfgs_b(calculateLoss, x.flatten(), fprime=getGradient, maxfun=20)
 
     # Saves the image after every iteration
-    output_name = "output/output_at_iteration_%d.png" % (i + 1)
+    output_name = ("output/output_at_iteration_%d.png" % i)
     xOut = postprocessArray(gen_image.copy())
     xIm = saveOriginalSize(xOut, output_name)
     print('Image saved to {}'.format(output_name))
