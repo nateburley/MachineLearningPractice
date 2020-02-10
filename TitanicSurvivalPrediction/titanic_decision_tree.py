@@ -3,18 +3,22 @@ This program contains a decision tree that will predict whether or not a given p
 the Titanic. 
 
 Results: 
-Decision tree, impute NaN Age with median— 74.3%
+Decision tree, impute NaN Age with median— 77.1%
 Decision tree, impute NaN Age with mean— 70%
 
 Data/Challenge: https://www.kaggle.com/c/titanic
 Decision Tree Help: https://www.datacamp.com/community/tutorials/decision-tree-classification-python
 Imputation Tips: https://machinelearningmastery.com/handle-missing-data-python/
+                 https://scikit-learn.org/stable/modules/impute.html
 
 Author: Nathaniel M. Burley
 """
 # Import statements
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
@@ -43,6 +47,14 @@ print(train_df.columns)
 x_df = train_df.drop(["Survived", "Name", "Ticket", "Cabin"], axis="columns")
 y_df = train_df.Survived
 x_train, x_test, y_train, y_test = train_test_split(x_df, y_df, test_size=0.2)
+
+# Print a heat map of correlations of the data
+corr = train_df.corr()
+plt.figure(figsize=(12,10))
+cor = train_df.corr()
+sns.heatmap(cor, annot=True, cmap=plt.cm.Reds)
+plt.show()
+plt.savefig("titanic_correlation_matrix.png")
 
 
 
