@@ -8,7 +8,10 @@ Notes:
   preserve the relations somehow...
 
 Sources:
-https://towardsdatascience.com/auto-generated-knowledge-graphs-92ca99a81121
+    - https://towardsdatascience.com/auto-generated-knowledge-graphs-92ca99a81121
+    - Really useful overview, with real-world examples and lots of pictures (for class paper):
+        https://usc-isi-i2.github.io/slides/2018-02-aaai-tutorial-constructing-kgs.pdf
+    
 """
 
 # Wikipedia scraping libraries
@@ -23,6 +26,8 @@ import neuralcoref
 # Graph libraries
 import networkx as nx
 import matplotlib.pyplot as plt
+# Miscellaneous
+import pickle
 
 
 
@@ -30,30 +35,46 @@ import matplotlib.pyplot as plt
 ## SCRAPE WIKIPEDIA REGARDING A TOPIC
 ########################################################################################################################
 
+# Function that gets all unique links in an array of pages
+def getPageLinks(page_names):
+    page_links = []
+    for page_name in page_names:
+        new_links = list(page_name.links.keys())
+        page_links = list(set().union(page_links, new_links))
+    
+    print("\n\nLINKS: {}".format(page_links))
+    return page_links
+
 # Function that scrapes Wikipedia for a given topic
-def wikiScrape(topic_name, verbose=True):
+def wikiScrape(topic_names, verbose=True):
     def wikiLink(link):
         try:
             page = wiki_api.page(link)
             if page.exists():
-                return {'page': link, 'text': page.text, 'link': page.fullurl,
-                        'categories': list(page.categories.keys())}
+                return {'page': link, 'text': page.text, 'link': page.fullurl, 'categories': list(page.categories.keys())}
         except:
             return None
 
     wiki_api = wikipediaapi.Wikipedia(language='en', extract_format=wikipediaapi.ExtractFormat.WIKI)
-    page_name = wiki_api.page(topic_name)
-    if not page_name.exists():
-        print('Page {} does not exist.'.format(topic_name))
-        return
+    page_names = [wiki_api.page(topic_name) for topic_name in topic_names]
+    # Remove all NULL/invalid pages
+    for page_name in page_names:
+        index = page_names.index(page_name)
+        if not page_name.exists():
+            print('Page {} does not exist.'.format(topic_names[index]))
+            page_names.remove(page_name)
+            topic_names.remove()
+        else:
+            print(page_name)
     
-    page_links = list(page_name.links.keys())
+    #page_links = list(page_name.links.keys())
+    page_links = getPageLinks(page_names)
     progress = tqdm(desc='Links Scraped', unit='', total=len(page_links)) if verbose else None
-    sources = [{'page': topic_name, 'text': page_name.text, 'link': page_name.fullurl,
-                'categories': list(page_name.categories.keys())}]
+    sources = [{'page': topic_name, 'text': page_name.text, 'link': page_name.fullurl, \
+        'categories': list(page_name.categories.keys())} for topic_name, page_name in zip(topic_names, page_names)]
     
     # Parallelize the scraping, to speed it up (?)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         future_link = {executor.submit(wikiLink, link): link for link in page_links}
         for future in concurrent.futures.as_completed(future_link):
             data = future.result()
@@ -66,7 +87,7 @@ def wikiScrape(topic_name, verbose=True):
     sources = pd.DataFrame(sources)
     sources = sources[(len(sources['text']) > 20) & ~(sources['page'].str.startswith(namespaces, na=True))]
     sources['categories'] = sources.categories.apply(lambda x: [y[9:] for y in x])
-    sources['topic'] = topic_name
+    #sources['topic'] = topic_name # Seems redundant? Since 'page' is already set to topic_name?
     print('Wikipedia pages scraped:', len(sources))
     
     return sources
@@ -76,11 +97,36 @@ def wikiScrape(topic_name, verbose=True):
 ########################################################################################################################
 ## COMPUTATIONAL LINGUISTICS/NLP FUNCTIONING
 # This section contains functions that do dependency parsing and find subject-predicate-object dependencies
-# TODO: FIGURE OUT HOW THIS WORKS!!!
-# TODO: Look into training a "custom entity recognizer model" to help make it domain specific
 # TODO: Look into coreference resolution to remove redundancies, normalize, etc. [adds a neural net here]
+"""
+NOTES:
+    - Sources for information extraction, and spacy:
+        - https://www.analyticsvidhya.com/blog/2019/10/how-to-build-knowledge-graph-text-using-spacy/
+        - https://www.analyticsvidhya.com/blog/2020/06/nlp-project-information-extraction/
+        - https://www.analyticsvidhya.com/blog/2019/09/introduction-information-extraction-python-spacy/
+        - https://realpython.com/natural-language-processing-spacy-python/
+        - https://programmerbackpack.com/python-knowledge-graph-understanding-semantic-relationships/
+
+    - Word2Vec similarity could be used to drop irrelevant terms
+        - Train the algorithm on all the pages used and then drop terms with low co-occurences (?)
+          That might only work for large datasets, but...could be worth looking into!
+
+    - Honestly, I should probably re-write this from scratch using better logic and sentence structure
+      for the relationship tuples. I can hand-code lots of simple rules, and maybe find libraries with more
+
+    * Something else that could be an interesting side project, perhaps on its own: inferring semantic rules from similar
+      dependency trees! The article (linked below) gives an introduction, but it would be interesting to put some thought
+      into mathematically determining how similar given trees are...this could actually even involve some CBR:
+        - Take some common trees (hyper/hyponyms, etc.) and make rules for them
+        - Next, for a sentence that doesn't fit into a pre-defined rule, figure out the most similar dependency tree, and
+          modify the rule as needed to fit the new sentence!
+        - That rule then goes into our list of rules, and the iteration proceeds
+      This could be a frickin' paper. "Automatic Semantic Rule Inference Using Case Based Reasoning"
+    - On that note, here's an algorithm for comparing trees: https://arxiv.org/pdf/1508.03381.pdf
+"""
 ########################################################################################################################
 
+#nlp = spacy.load('en_core_web_sm')
 nlp = spacy.load('en_core_web_lg')
 neuralcoref.add_to_pipe(nlp)
 
@@ -160,8 +206,12 @@ def getEntityPairs(text, coref=True):
                 if relation:
                     relation = relation[0]
                     # add adposition or particle to relationship
-                    if relation.nbor(1).pos_ in ('ADP', 'PART'):
-                        relation = ' '.join((str(relation), str(relation.nbor(1))))
+                    try:
+                        if relation.nbor(1).pos_ in ('ADP', 'PART'):
+                            relation = ' '.join((str(relation), str(relation.nbor(1))))
+                    except:
+                        print("Failed at line 207")
+                        return
                 else:
                     relation = 'unknown'
 
@@ -172,9 +222,21 @@ def getEntityPairs(text, coref=True):
 
     ent_pairs = [sublist for sublist in ent_pairs if not any(str(ent) == '' for ent in sublist)]
     pairs = pd.DataFrame(ent_pairs, columns=['subject', 'relation', 'object', 'subject_type', 'object_type'])
-    print('Entity pairs extracted:', str(len(ent_pairs)))
+    #print('Entity pairs extracted:', str(len(ent_pairs)))
 
     return pairs
+
+# Function that extracts ALL the pairs. Not just the first one smh
+def extractAllRelations(wiki_data):
+    all_pairs = []
+    for i in range(0, 100): #range(len(wiki_data.index)):
+        #print(wiki_data.loc[i,'text'])
+        pairs = getEntityPairs(wiki_data.loc[i,'text'])
+        all_pairs.append(pairs)
+        print("Made it through {} iterations".format(i))
+    all_pairs_df = pd.concat(all_pairs)
+    print("Successfully extracted {} entity pairs".format(len(all_pairs_df.index)))
+    return all_pairs_df
 
 
 
@@ -190,18 +252,20 @@ def drawKG(pairs):
     plt.figure(num=None, figsize=(120, 90), dpi=80)
     nx.draw_networkx(
         k_graph,
-        node_size=[int(deg[1]) * 500 for deg in node_deg],
+        node_size=[int(deg[1]) * 1000 for deg in node_deg],
         arrowsize=20,
         linewidths=1.5,
         pos=layout,
         edge_color='red',
         edgecolors='black',
-        node_color='white',
+        node_color='green',
         )
     labels = dict(zip(list(zip(pairs.subject, pairs.object)), pairs['relation'].tolist()))
-    nx.draw_networkx_edge_labels(k_graph, pos=layout, edge_labels=labels, font_color='red')
+    print(labels)
+    nx.draw_networkx_edge_labels(k_graph, pos=layout, edge_labels=labels, font_color='black')
     plt.axis('off')
     plt.show()
+    plt.savefig('church_knowledge_graph.png')
 
 
 # Function that plots a "subgraph", if the main graph is too messy
@@ -231,6 +295,7 @@ def filterGraph(pairs, node):
     nx.draw_networkx_edge_labels(subgraph, pos=layout, edge_labels=sublabels, font_color='red')
     plt.axis('off')
     plt.show()
+    plt.savefig('church_knowledge_graph.png')
 
 
 
@@ -241,16 +306,26 @@ def filterGraph(pairs, node):
 ########################################################################################################################
 
 # Scrape Wikipedia for a topic
-wiki_data = wikiScrape('World War II')
-print("WIKIPEDIA SCRAPE DF")
-print(wiki_data.head(25))
-print("\n")
+# wiki_data = wikiScrape(['Catholic Church', 'Islam', 'Russian Orthodox Church', 'Judaism', 'Buddhism', 'Panpsychism', 'UFO religion'])
+# print("WIKIPEDIA SCRAPE DF LENGTH: {}".format(len(wiki_data.index)))
+# print(wiki_data.head(25))
+# print("\n")
+
+# # Pickle the wiki_data to not have to scrape a million times
+# datafile = open('religion_wiki_data', 'wb')
+# pickle.dump(wiki_data, datafile)
+
+# Load in the wiki data, so we don't have to scrape
+infile = open('religion_wiki_data', 'rb')
+wiki_data = pickle.load(infile)
 
 # Get subject object relationships (which form vertices and edges in the graph)
-pairs = getEntityPairs(wiki_data.loc[0,'text'])
-print("ENTITY PAIRS-- SUBJECT/OBJECT RELATIONSHIPS")
-print(pairs.head(10))
+# TODO: Parallelize the shit out of this
+all_pairs = extractAllRelations(wiki_data)
+print("ENTITY PAIRS-- SUBJECT/OBJECT RELATIONSHIPS LENGTH: {}".format(len(all_pairs.index)))
+print(all_pairs.head(20))
+print(all_pairs.tail(20))
 print("\n")
 
 # Draw the graph
-drawKG(pairs)
+drawKG(all_pairs)
