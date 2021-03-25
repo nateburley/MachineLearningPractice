@@ -306,21 +306,22 @@ def filterGraph(pairs, node):
 ########################################################################################################################
 
 # Scrape Wikipedia for a topic
-# wiki_data = wikiScrape(['Catholic Church', 'Islam', 'Russian Orthodox Church', 'Judaism', 'Buddhism', 'Panpsychism', 'UFO religion'])
-# print("WIKIPEDIA SCRAPE DF LENGTH: {}".format(len(wiki_data.index)))
-# print(wiki_data.head(25))
-# print("\n")
+wiki_data = wikiScrape(['Catholic Church', 'Islam', 'Russian Orthodox Church', 'Judaism', 'Buddhism', 'Panpsychism', 'UFO religion'])
+print("WIKIPEDIA SCRAPE DF LENGTH: {}".format(len(wiki_data.index)))
+print(wiki_data.head(25))
+print("\n")
 
-# # Pickle the wiki_data to not have to scrape a million times
-# datafile = open('religion_wiki_data', 'wb')
-# pickle.dump(wiki_data, datafile)
+# Pickle the wiki_data to not have to scrape a million times
+datafile = open('religion_wiki_data', 'wb')
+pickle.dump(wiki_data, datafile)
 
 # Load in the wiki data, so we don't have to scrape
-infile = open('religion_wiki_data', 'rb')
-wiki_data = pickle.load(infile)
+# infile = open('religion_wiki_data', 'rb')
+# wiki_data = pickle.load(infile)
 
 # Get subject object relationships (which form vertices and edges in the graph)
-# TODO: Parallelize the shit out of this
+# TODO: Parallelize (thread) the shit out of this
+#   - https://realpython.com/intro-to-python-threading/
 all_pairs = extractAllRelations(wiki_data)
 print("ENTITY PAIRS-- SUBJECT/OBJECT RELATIONSHIPS LENGTH: {}".format(len(all_pairs.index)))
 print(all_pairs.head(20))
