@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 
 
 # Function that builds a dataset where the "rule" is the sine function
-def buildSineDataset(num_train=100, num_test=25):
+def buildSineDataset(num_train=1000, num_test=250):
     # Build training dataset
     X_train = np.array([0.1 * x for x in range(0, num_train)])
     y_train = np.array([math.sin(x) for x in X_train])
@@ -35,3 +35,11 @@ def plotDataset(X_train, X_test, y_train, y_test):
     plt.plot(X_test, y_test, color="red", label="Testing Data")
     plt.legend()
     plt.show()
+
+
+# Function that plots the predictions and the actual values
+def plotPredictions(X_test, y_test, y_hat):
+    plt.plot(X_test, y_test, color="blue", label="Validation Set")
+    plt.plot(X_test, y_hat, color="red", label="Predicted Values")
+    plt.legend()
+    plt.show()    

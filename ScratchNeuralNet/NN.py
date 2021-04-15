@@ -27,18 +27,22 @@ class NeuralNetwork(object):
         self.output_layer_size = 1
 
         # Weights defined (hard coded for now. Will make list later)
-        self.W1 = np.ones((self.input_layer_size, self.hidden_layer1_size))
-        self.W2 = np.ones((self.hidden_layer1_size, self.hidden_layer2_size))
-        self.W3 = np.ones((self.hidden_layer2_size, self.output_layer_size))
+        self.W1 = 0.5 * np.ones((self.input_layer_size, self.hidden_layer1_size))
+        self.W2 = 0.5 * np.ones((self.hidden_layer1_size, self.hidden_layer2_size))
+        self.W3 = 0.5 * np.ones((self.hidden_layer2_size, self.output_layer_size))
 
         # Set an activation function
         self.activation_name = "sigmoid"
 
         # Set our learning rate
-        self.learning_rate = 0.05
+        self.learning_rate = 2
+        self.learn_delta = 0.6  # Parameter that decreases learning rate as we converge
 
         # Number of training epochs
         self.num_epochs = 100
+
+        ### PARAMETERS FOR CONJUGATE GRADIENT
+        self.p1_0 = 0
 
 
     # "Setter" function for the activation (so we can experiment with different ones)
@@ -100,7 +104,7 @@ class NeuralNetwork(object):
         #print("Shape of z2: {}".format(self.z2.shape))
         self.a2 = self.activationFunc(self.z2)
         self.z3 = np.matmul(self.a2, self.W2)
-        print("Shape of z3: {}".format(self.z3.shape))
+        #print("Shape of z3: {}".format(self.z3.shape))
         self.a3 = self.activationFunc(self.z3)
         self.z4 = np.dot(self.a3, self.W3)  # Should this be dot? Or just multiply
         #print("Shape of z4: {}".format(self.z4.shape))  # Why the fuck is this 1,1...
@@ -173,11 +177,16 @@ class NeuralNetwork(object):
         self.W1 = self.W1 - (self.learning_rate * dJdW1)
         self.W2 = self.W2 - (self.learning_rate * dJdW2)
         self.W3 = self.W3 - (self.learning_rate * dJdW3)
+    
+    # Function that updates the weights with conjugate gradient
+
 
     
     # Function that trains on a complete dataset (or batch, I suppose. Multiple samples.)
     def train(self, X_train, y_train, num_epochs=100):
         for epoch in range(0, self.num_epochs):
             for X, y in zip(X_train, y_train):
-                self.updateWeights(X, y)
+                self.updateWeights(X, y)  # Update weights by taking step in gradient direction
+                #self.learning_rate = self.learning_rate / (1 + (epoch ** self.learn_delta))
+
 
