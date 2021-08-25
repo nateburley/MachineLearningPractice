@@ -42,7 +42,10 @@ class NeuralNetwork(object):
         self.num_epochs = 100
 
         ### PARAMETERS FOR CONJUGATE GRADIENT
-        self.p1_0 = 0
+        self.W = {'W1': self.W1, 'W2': self.W2, 'W3': self.W3}
+        self.previous_gradients = {'W1': 0, 'W2': 0, 'W3': 0}
+        self.previous_directions = {'W1': 0, 'W2': 0, 'W3': 0}
+        self.previously_trained = 0
 
 
     # "Setter" function for the activation (so we can experiment with different ones)
@@ -178,15 +181,81 @@ class NeuralNetwork(object):
         self.W2 = self.W2 - (self.learning_rate * dJdW2)
         self.W3 = self.W3 - (self.learning_rate * dJdW3)
     
-    # Function that updates the weights with conjugate gradient
 
+    # Function that updates the weights with conjugate gradient
+    def conjugateGradientWeightUpdate(self, X, y):
+        # Compute the gradients
+        dJdW1, dJdW2, dJdW3 = self.costFuncPrime(X, y)
+
+        # If this is the first loop, use the gradient as our initial direction
+        if self.previously_trained == 0:
+
+            # Update the weights
+            self.W1 = self.W1 - (self.learning_rate * dJdW1)
+            self.W2 = self.W2 - (self.learning_rate * dJdW2)
+            self.W3 = self.W3 - (self.learning_rate * dJdW3)
+
+            # Update previous gradients
+            self.previous_gradients['W1'] = dJdW1
+            self.previous_gradients['W2'] = dJdW2
+            self.previous_gradients['W3'] = dJdW3
+
+            # Update previous directions
+            self.previous_directions['W1'] = dJdW1
+            self.previous_directions['W2'] = dJdW2
+            self.previous_directions['W3'] = dJdW3
+
+            # Mark this network as "trained on"
+            self.previously_trained = 1
+
+        else:   
+            # Beta(s) for conjugacy determined
+            print("Shape of dJdW1, dJdW1.T: {}, {}".format(dJdW1.shape, dJdW1.T.shape))
+            beta_k_W1 = (np.matmul(dJdW1, dJdW1.T)) / \
+                (np.matmul(self.previous_gradients['W1'], self.previous_gradients['W1'].T))
+            
+            beta_k_W2 = (np.inner(dJdW2.T, dJdW2)) / \
+                (np.inner(self.previous_gradients['W2'].T, self.previous_gradients['W2']))
+            
+            beta_k_W3 = (np.inner(dJdW3.T, dJdW3)) / \
+                (np.inner(self.previous_gradients['W3'].T, self.previous_gradients['W3']))
+
+            # Update search directions to ensure conjugacy
+            p_k_W1 = (beta_k_W1 * self.previous_directions['W1']) - dJdW1
+            p_k_W2 = (beta_k_W2 * self.previous_directions['W2']) - dJdW2
+            p_k_W3 = (beta_k_W3 * self.previous_directions['W3']) - dJdW3
+
+            # Lastly, update the weights
+            # TODO: Check sign of learning_rate * p_k_W to make sure this is decreasing!
+            self.W1 = self.W1 + (self.learning_rate * p_k_W1)
+            self.W1 = self.W1 + (self.learning_rate * p_k_W1)
+            self.W1 = self.W1 + (self.learning_rate * p_k_W1)
+
+            # Update previous gradients
+            self.previous_gradients['W1'] = dJdW1
+            self.previous_gradients['W2'] = dJdW2
+            self.previous_gradients['W3'] = dJdW3
+
+            # And update previous directions
+            self.previous_directions['W1'] = dJdW1
+            self.previous_directions['W2'] = dJdW2
+            self.previous_directions['W3'] = dJdW3
+
+
+# Function that updates the weights with conjugate gradient
+    def conjugateGradient(self, X, y):
+        r0 = y
 
     
     # Function that trains on a complete dataset (or batch, I suppose. Multiple samples.)
-    def train(self, X_train, y_train, num_epochs=100):
+    def train(self, X_train, y_train, optimizer='SD', num_epochs=100):
         for epoch in range(0, self.num_epochs):
             for X, y in zip(X_train, y_train):
-                self.updateWeights(X, y)  # Update weights by taking step in gradient direction
-                #self.learning_rate = self.learning_rate / (1 + (epoch ** self.learn_delta))
+                if optimizer == 'SD':
+                    self.updateWeights(X, y)  # Normal steepest descent
+                    #self.learning_rate = self.learning_rate / (1 + (epoch ** self.learn_delta))
+
+                elif optimizer == 'CG':    # Conjugate Gradient
+                    self.conjugateGradientWeightUpdate(X, y)
 
 

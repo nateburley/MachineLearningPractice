@@ -47,7 +47,7 @@ if __name__ == "__main__":
     ###################################### TRAIN AND EVALUATE ######################################
 
     # Actually train on the training data!
-    test_model.train(X_train, y_train)
+    test_model.train(X_train, y_train, optimizer='CG')
 
     # Print architecture after training (to visualize weights)
     test_model.displayArchitecture()
