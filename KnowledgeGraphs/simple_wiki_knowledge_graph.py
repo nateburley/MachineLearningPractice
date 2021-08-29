@@ -4,8 +4,8 @@ This file mines Wikipedia articles for syntax and keywords, and builds a knowled
 Author: Nathaniel M. Burley
 
 Notes:
-- Look at Word2Vec, and then embedding that "vector space" as a knowledge graph and
-  preserve the relations somehow...
+- Explore if vector embeddings of words can be converted to knowledge graphs, and vice 
+  versa.
 
 Sources:
     - https://towardsdatascience.com/auto-generated-knowledge-graphs-92ca99a81121
@@ -100,7 +100,7 @@ def wikiScrape(topic_names, verbose=True):
 # TODO: Look into coreference resolution to remove redundancies, normalize, etc. [adds a neural net here]
 """
 NOTES:
-    - Sources for information extraction, and spacy:
+    - Further reading, and helpful information:
         - https://www.analyticsvidhya.com/blog/2019/10/how-to-build-knowledge-graph-text-using-spacy/
         - https://www.analyticsvidhya.com/blog/2020/06/nlp-project-information-extraction/
         - https://www.analyticsvidhya.com/blog/2019/09/introduction-information-extraction-python-spacy/
